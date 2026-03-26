@@ -1,5 +1,5 @@
-const CACHE_NAME = 'videotheque-202603221545';
-const FILES_TO_CACHE = ['/', '/index.html'];
+const CACHE_NAME = 'videotheque-202603261112';
+const FILES_TO_CACHE = ['/Videotheque/', '/Videotheque/index.html'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
