@@ -1686,21 +1686,30 @@ function ouvrirDetail(id){
   afficherDetail(f);
 
   // Si tmdbId connu et durée manquante (ou série sans épisodes), recharger depuis TMDB
-  if(f.tmdbId && (f.duree===0||!f.duree||f.categorie==='series')){
+  if(f.tmdbId && (f.duree===0||!f.duree||f.categorie==='series'||!f.castingDetails||!f.realisateur)){
     const endpoint=f.categorie==='series'?'/tv/':'/movie/';
-    fetch(TMDB_API+endpoint+f.tmdbId+'?api_key='+prefs.apiKey+'&language=fr-FR&append_to_response=season/1,season/2,season/3,season/4,season/5,videos')
+    fetch(TMDB_API+endpoint+f.tmdbId+'?api_key='+prefs.apiKey+'&language=fr-FR&append_to_response=season/1,season/2,season/3,season/4,season/5,videos,credits')
       .then(r=>r.json())
       .then(d=>{
-        // Mettre à jour la durée
         const duree=d.runtime||((d.episode_run_time&&d.episode_run_time[0])||0);
         if(duree>0){ f.duree=duree; }
-        // Extraire le trailer YouTube (priorité FR, sinon EN)
         const videos=d.videos&&d.videos.results||[];
         const trailer=videos.find(v=>v.type==='Trailer'&&v.site==='YouTube'&&v.iso_639_1==='fr')
           ||videos.find(v=>v.type==='Trailer'&&v.site==='YouTube')
           ||videos.find(v=>v.site==='YouTube');
         if(trailer) f.trailerKey=trailer.key;
-        // Mettre à jour nb saisons/épisodes pour séries
+        // Réalisateur
+        if(d.credits&&d.credits.crew){
+          f.realisateur=(d.credits.crew||[]).filter(c=>c.job==='Director').map(c=>c.name).join(', ');
+        }
+        // Casting avec photos
+        if(d.credits&&d.credits.cast){
+          f.castingDetails=(d.credits.cast||[]).slice(0,10).map(a=>({
+            name:a.name,character:a.character,
+            photo:a.profile_path?'https://image.tmdb.org/t/p/w185'+a.profile_path:null
+          }));
+          f.casting=(d.credits.cast||[]).slice(0,10).map(a=>a.name).join(',');
+        }
         if(f.categorie==='series'){
           f.nbSaisons=d.number_of_seasons||0;
           f.nbEpisodes=d.number_of_episodes||0;
@@ -1711,7 +1720,6 @@ function ouvrirDetail(id){
           }
         }
         sauvegarder();
-        // Réafficher avec les nouvelles données
         afficherDetail(f);
       })
       .catch(()=>{});
@@ -1784,8 +1792,23 @@ function afficherDetail(f){
     +(f.duree>0?'⏱ '+formatDuree(f.duree)+'<br>':'')
     +(f.nbSaisons?'📺 '+f.nbSaisons+' saison(s) • '+(f.nbEpisodes||'')+(f.nbEpisodes?' épisodes<br>':'<br>'):'')
     +(f.notesTmdb>0?'⭐ '+f.notesTmdb.toFixed(1)+' / 10<br>':'')
+    +(f.realisateur?'🎬 '+esc(f.realisateur)+'<br>':'')
     +(casting?'🎭 '+esc(casting):'')
     +'</div></div></div>'
+    // Casting avec photos
+    +(f.castingDetails&&f.castingDetails.length?
+      '<p style="font-size:11px;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🎭 Casting</p>'
+      +'<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;margin-bottom:14px;scrollbar-width:none">'
+      +f.castingDetails.slice(0,10).map(a=>
+        '<div style="flex:0 0 70px;text-align:center;cursor:pointer" onclick="rechercheTmdbActeur(\''+esc(a.name)+'\')">'
+        +(a.photo?'<img src="'+a.photo+'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 4px;background:var(--surface2)">'
+          :'<div style="width:60px;height:60px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;margin:0 auto 4px;font-size:22px">👤</div>')
+        +'<div style="font-size:10px;font-weight:bold;color:var(--text);line-height:1.2">'+esc(a.name)+'</div>'
+        +(a.character?'<div style="font-size:9px;color:var(--text2)">'+esc(a.character)+'</div>':'')
+        +'</div>'
+      ).join('')
+      +'</div>'
+    :'')
     // Nationalité éditable
     +'<div style="margin-bottom:12px">'
     +'<p style="font-size:11px;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">🌍 Nationalité</p>'
@@ -2109,6 +2132,10 @@ async function ajouterTmdbDepuisModal(tmdbId,type){
     dateSortie:date,notesTmdb:d.vote_average||0,
     genres:(d.genres||[]).map(g=>g.name).join(','),
     casting:(d.credits?.cast||[]).slice(0,10).map(a=>a.name).join(','),
+            castingDetails:(d.credits?.cast||[]).slice(0,10).map(a=>({name:a.name,character:a.character,photo:a.profile_path?'https://image.tmdb.org/t/p/w185'+a.profile_path:null})),
+            realisateur:(d.credits?.crew||[]).filter(c=>c.job==='Director').map(c=>c.name).join(', '),
+    castingDetails:(d.credits?.cast||[]).slice(0,10).map(a=>({name:a.name,character:a.character,photo:a.profile_path?'https://image.tmdb.org/t/p/w185'+a.profile_path:null})),
+    realisateur:(d.credits?.crew||[]).filter(c=>c.job==='Director').map(c=>c.name).join(', '),
     nationalite:nat, pays,
     duree:d.runtime||((d.episode_run_time&&d.episode_run_time[0])||0)
   });
@@ -2147,6 +2174,8 @@ async function ajouterTmdb(tmdbId,type,btn){
       dateSortie:date,notesTmdb:d.vote_average||0,
       genres:(d.genres||[]).map(g=>g.name).join(','),
       casting:(d.credits?.cast||[]).slice(0,10).map(a=>a.name).join(','),
+            castingDetails:(d.credits?.cast||[]).slice(0,10).map(a=>({name:a.name,character:a.character,photo:a.profile_path?'https://image.tmdb.org/t/p/w185'+a.profile_path:null})),
+            realisateur:(d.credits?.crew||[]).filter(c=>c.job==='Director').map(c=>c.name).join(', '),
       nationalite:nat, pays,
       duree:d.runtime||((d.episode_run_time&&d.episode_run_time[0])||0)
     });
@@ -2285,6 +2314,8 @@ async function ajouterTousFilmsStudio(ids, label, btn){
         dateSortie:d.release_date||'',notesTmdb:d.vote_average||0,
         genres:(d.genres||[]).map(g=>g.name).join(','),
         casting:(d.credits?.cast||[]).slice(0,10).map(a=>a.name).join(','),
+            castingDetails:(d.credits?.cast||[]).slice(0,10).map(a=>({name:a.name,character:a.character,photo:a.profile_path?'https://image.tmdb.org/t/p/w185'+a.profile_path:null})),
+            realisateur:(d.credits?.crew||[]).filter(c=>c.job==='Director').map(c=>c.name).join(', '),
         nationalite:paysArr.join(', '),pays:paysArr,saga:label
       }));
       count++;
@@ -2319,6 +2350,8 @@ async function ajouterTousFilmsRecherche(query){
           dateSortie:d.release_date||'',notesTmdb:d.vote_average||0,
           genres:(d.genres||[]).map(g=>g.name).join(','),
           casting:(d.credits?.cast||[]).slice(0,10).map(a=>a.name).join(','),
+            castingDetails:(d.credits?.cast||[]).slice(0,10).map(a=>({name:a.name,character:a.character,photo:a.profile_path?'https://image.tmdb.org/t/p/w185'+a.profile_path:null})),
+            realisateur:(d.credits?.crew||[]).filter(c=>c.job==='Director').map(c=>c.name).join(', '),
           nationalite:paysArr.join(', '),pays:paysArr
         }));
         count++;
@@ -2393,6 +2426,8 @@ async function ajouterTouteLaCollection(collectionId, nom){
           dateSortie:d.release_date||'',notesTmdb:d.vote_average||0,
           genres:(d.genres||[]).map(g=>g.name).join(','),
           casting:(d.credits?.cast||[]).slice(0,10).map(a=>a.name).join(','),
+            castingDetails:(d.credits?.cast||[]).slice(0,10).map(a=>({name:a.name,character:a.character,photo:a.profile_path?'https://image.tmdb.org/t/p/w185'+a.profile_path:null})),
+            realisateur:(d.credits?.crew||[]).filter(c=>c.job==='Director').map(c=>c.name).join(', '),
           nationalite:paysArr.join(', '),pays:paysArr,
           saga:nom
         }));
