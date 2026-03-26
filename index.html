@@ -2443,6 +2443,18 @@ async function ajouterTouteLaCollection(collectionId, nom){
   }catch(e){btn.textContent='Erreur';snack('Erreur lors de l\'ajout');}
 }
 
+function rechercheTmdbActeur(nom){
+  goPage('search');
+  setTimeout(()=>{
+    setSearchTab('acteur');
+    setTimeout(()=>{
+      const input=document.getElementById('acteur-query');
+      if(input){input.value=nom;}
+      searchActeur();
+    },100);
+  },100);
+}
+
 async function searchActeur(){
   const q=document.getElementById('acteur-query').value.trim();
   if(!q) return;
