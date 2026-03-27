@@ -151,8 +151,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .filtre-groupe{margin-bottom:12px}
 .filtre-groupe:last-child{margin-bottom:0}
 .filtre-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block}
-.tags-scroll{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
-.tags-scroll::-webkit-scrollbar{display:none}
+.tags-scroll{display:flex;gap:6px;flex-wrap:wrap;padding-bottom:4px}
 .tag{flex-shrink:0;padding:5px 12px;border-radius:16px;font-size:12px;border:1px solid #333;background:none;color:var(--text2);cursor:pointer;white-space:nowrap}
 .tag.active{background:var(--green);color:#fff;border-color:var(--green)}
 .tag.active-decade{background:#1a3d6e;color:#7ab4f5;border-color:#1a3d6e}
@@ -175,7 +174,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .search-bar input{flex:1;background:var(--surface);border:1px solid #333;border-radius:10px;padding:10px 14px;color:var(--text);font-size:14px;outline:none}
 .search-bar input:focus{border-color:var(--green-light)}
 .result-item{display:flex;gap:10px;background:var(--surface);border-radius:10px;padding:10px;margin-bottom:8px;align-items:flex-start;cursor:pointer}
-.result-item img{width:50px;height:75px;object-fit:cover;border-radius:6px;flex-shrink:0;background:var(--green-dark)}
+.result-item img{width:var(--search-img-size,50px);height:calc(var(--search-img-size,50px) * 1.5);object-fit:cover;border-radius:6px;flex-shrink:0;background:var(--green-dark)}
 .result-info{flex:1;min-width:0}
 .result-info h4{font-size:13px;margin-bottom:3px}
 .result-info .rmeta{font-size:11px;color:var(--text2);margin-bottom:4px}
@@ -200,12 +199,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .modal-header h3{flex:1;font-size:15px}
 .modal-close{background:none;border:none;color:var(--text2);font-size:24px;cursor:pointer;padding:0 4px;line-height:1}
 .modal-body{padding:16px}
-.cast-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cast-grid{display:grid;grid-template-columns:repeat(var(--search-cols,3),1fr);gap:8px}
 .cast-card{background:var(--surface2);border-radius:10px;overflow:hidden;cursor:pointer;text-align:center;padding-bottom:8px}
 .cast-card img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:var(--green-dark)}
 .cast-card .cast-name{font-size:11px;font-weight:bold;padding:5px 4px 2px;line-height:1.3}
 .cast-card .cast-role{font-size:10px;color:var(--text2);padding:0 4px}
-.filmo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.filmo-grid{display:grid;grid-template-columns:repeat(var(--search-cols,3),1fr);gap:8px}
 .filmo-card{background:var(--surface2);border-radius:10px;overflow:hidden;cursor:pointer;position:relative}
 .filmo-card img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:var(--green-dark)}
 .filmo-card .filmo-info{padding:6px 8px 8px}
@@ -505,7 +504,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
         <button class="btn btn-primary" onclick="searchTmdb('movie')">🔍</button>
       </div>
       <div id="search-loader" class="loader" style="display:none"><div class="spinner"></div></div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:11px;color:var(--text2)">Taille :</span><input type="range" min="1" max="4" step="1" value="1" style="flex:1" oninput="setSearchResultSize(this.value)"></div><div id="search-results"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:11px;color:var(--text2)">Taille :</span><input type="range" min="1" max="4" step="1" value="1" style="flex:1" oninput="setSearchResultSize(this.value)"></div><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:4px 0"><span style="font-size:11px;color:var(--text2)">🔎 Taille :</span><input type="range" min="2" max="6" step="1" value="3" style="flex:1;accent-color:var(--green)" oninput="setSearchCols(this.value)"><span id="search-cols-label" style="font-size:11px;color:var(--text2);min-width:20px">3</span></div><div id="search-results"></div>
     </div>
 
     <!-- Acteur -->
@@ -655,7 +654,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <h3>💾 Sauvegarde</h3>
       <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Compatible avec l'app <strong style="color:var(--green-light)">Android Studio</strong>.</p>
       <button class="btn btn-primary" style="width:100%;margin-bottom:8px" onclick="exporterJSON()">💾 Sauvegarder ma collection (JSON)</button>
-      <div id="json-status" style="font-size:11px;color:var(--text2);text-align:center;margin-bottom:8px"></div>
+      <div id="json-status" style="font-size:11px;color:var(--text2);text-align:center;margin-bottom:4px"></div>
       <label class="btn btn-outline" style="width:100%;display:block;text-align:center;cursor:pointer;padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600">
         📥 Importer (JSON)
         <input type="file" accept=".json" style="display:none" onchange="importerJSON(event)">
@@ -1635,12 +1634,18 @@ function assignerGenreSelection(){
 
 // ── TAILLE RÉSULTATS RECHERCHE ──
 let _searchResultSize=1;
+function setSearchCols(val){
+  const n=parseInt(val);
+  document.documentElement.style.setProperty('--search-cols',n);
+  const lbl=document.getElementById('search-cols-label');
+  if(lbl) lbl.textContent=n;
+}
+
 function setSearchResultSize(val){
   _searchResultSize=parseInt(val);
-  const items=document.querySelectorAll('.result-item img');
   const sizes=[50,80,120,160];
   const s=sizes[_searchResultSize-1]||50;
-  items.forEach(img=>{img.style.width=s+'px';img.style.height=(s*1.5)+'px';});
+  document.documentElement.style.setProperty('--search-img-size', s+'px');
 }
 
 function ouvrirModalSagaAssign(){
@@ -2825,8 +2830,9 @@ function saveApiKey(){
 
 function exporterJSON(){
   const now=new Date().toLocaleString('fr-FR');
+  localStorage.setItem('videotheque_json_date', now);
   const el=document.getElementById('json-status');
-  if(el) el.textContent='✓ Sauvegardé le '+now;
+  if(el) el.textContent='✓ Dernière sauvegarde : '+now;
   if(films.length===0){snack('⚠️ Aucun contenu à exporter');return;}
   const a=document.createElement('a');
   a.href='data:application/json,'+encodeURIComponent(JSON.stringify(films,null,2));
@@ -3314,29 +3320,12 @@ function snack(msg){
 }
 
 // ── INIT ──
+// Restaurer les dates de sauvegarde
+const _savedJsonDate=localStorage.getItem('videotheque_json_date');
+if(_savedJsonDate){const el=document.getElementById('json-status');if(el)el.textContent='✓ Dernière sauvegarde : '+_savedJsonDate;}
 charger();
 
-// Reconnexion Google silencieuse au chargement
-window.addEventListener('load', ()=>{
-  setTimeout(()=>{
-    if(typeof google==='undefined') return;
-    try{
-      google.accounts.oauth2.initTokenClient({
-        client_id:GOOGLE_CLIENT_ID,
-        scope:DRIVE_SCOPE,
-        prompt:'none',
-        callback:(resp)=>{
-          if(resp.error){
-            // Pas de session active, afficher le bouton connexion normalement
-            return;
-          }
-          _googleToken=resp.access_token;
-          chargerProfilGoogle();
-        }
-      }).requestAccessToken();
-    }catch(e){}
-  }, 1500); // Attendre que GSI soit chargé
-});
+// Connexion Google manuelle uniquement (pas de reconnexion auto)
 document.documentElement.style.setProperty('--cols',prefs.cols||2);
 document.documentElement.style.setProperty('--home-cols',prefs.homeCols||4);
 if(prefs.theme==='light') document.body.classList.add('light-mode');
