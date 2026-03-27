@@ -460,7 +460,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <div style="display:flex;align-items:center;gap:6px;width:100%;flex-wrap:wrap;margin-bottom:6px">
         <span class="sel-count" id="sel-count">0 sélectionné(s)</span>
         <button class="sel-btn" onclick="selTout()" style="background:var(--surface2);color:#fff">Tout</button>
-        <button class="sel-btn" onclick="ouvrirModalFusion()" style="background:#2a1a5c;color:#b090ff">🔀 Fusionner</button>
+        <button class="sel-btn" onclick="ouvrirModalGenreSelection()" style="background:#1a3a2a;color:#80e080">🎭 Genre</button>
+      <button class="sel-btn" onclick="ouvrirModalFusion()" style="background:#2a1a5c;color:#b090ff">🔀 Fusionner</button>
         <button class="sel-btn" onclick="ouvrirModalSagaAssign()" style="background:#1a3a5c;color:#60d0ff">🏷 Saga</button>
         <button class="sel-btn" onclick="selAction('supprimer')" style="background:#5c1a1a;color:#ff6a6a">🗑 Suppr.</button>
         <button class="sel-btn" onclick="toggleModeSelection()" style="background:none;color:#aaa;border:1px solid #444">✕</button>
@@ -504,7 +505,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
         <button class="btn btn-primary" onclick="searchTmdb('movie')">🔍</button>
       </div>
       <div id="search-loader" class="loader" style="display:none"><div class="spinner"></div></div>
-      <div id="search-results"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:11px;color:var(--text2)">Taille :</span><input type="range" min="1" max="4" step="1" value="1" style="flex:1" oninput="setSearchResultSize(this.value)"></div><div id="search-results"></div>
     </div>
 
     <!-- Acteur -->
@@ -654,6 +655,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <h3>💾 Sauvegarde</h3>
       <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Compatible avec l'app <strong style="color:var(--green-light)">Android Studio</strong>.</p>
       <button class="btn btn-primary" style="width:100%;margin-bottom:8px" onclick="exporterJSON()">💾 Sauvegarder ma collection (JSON)</button>
+      <div id="json-status" style="font-size:11px;color:var(--text2);text-align:center;margin-bottom:8px"></div>
       <label class="btn btn-outline" style="width:100%;display:block;text-align:center;cursor:pointer;padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600">
         📥 Importer (JSON)
         <input type="file" accept=".json" style="display:none" onchange="importerJSON(event)">
@@ -710,6 +712,30 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div style="display:flex;gap:8px">
       <button class="btn" style="flex:1;background:var(--surface2);color:var(--text2)" onclick="fermerModal('modal-saga')">Annuler</button>
       <button class="btn btn-primary" style="flex:1" onclick="assignerSaga()">🎯 Assigner</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GENRE SELECTION -->
+<div class="modal-overlay" id="modal-genre-selection" onclick="if(event.target===this)fermerModal('modal-genre-selection')">
+  <div class="modal-box" style="padding:20px">
+    <h3 style="font-size:17px;font-weight:bold;margin-bottom:6px">🎭 Assigner genre/sous-genre</h3>
+    <p id="genre-sel-info" style="font-size:12px;color:var(--text2);margin-bottom:14px"></p>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:6px">Genre :</p>
+    <div style="position:relative;margin-bottom:12px">
+      <input id="genre-sel-input" class="version-input" style="width:100%" placeholder="Ajouter un genre..."
+        oninput="showGenreSelSuggestions()" onfocus="showGenreSelSuggestions()" onblur="setTimeout(()=>hideGenreSelSuggestions(),200)">
+      <div id="genre-sel-suggestions" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid #333;border-radius:0 0 8px 8px;z-index:50;max-height:150px;overflow-y:auto"></div>
+    </div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:6px">Sous-genre :</p>
+    <div style="position:relative;margin-bottom:16px">
+      <input id="sousgenre-sel-input" class="version-input" style="width:100%" placeholder="Ajouter un sous-genre (optionnel)..."
+        oninput="showSousGenreSelSuggestions()" onfocus="showSousGenreSelSuggestions()" onblur="setTimeout(()=>hideSousGenreSelSuggestions(),200)">
+      <div id="sousgenre-sel-suggestions" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid #333;border-radius:0 0 8px 8px;z-index:50;max-height:150px;overflow-y:auto"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" style="flex:1;background:var(--surface2);color:var(--text2)" onclick="fermerModal('modal-genre-selection')">Annuler</button>
+      <button class="btn btn-primary" style="flex:1" onclick="assignerGenreSelection()">🎭 Assigner</button>
     </div>
   </div>
 </div>
@@ -862,7 +888,7 @@ let films=[],prefs={apiKey:'1847535cfa0ee0cdcd25f1954cd9614f',cols:2};
 let triActuel='date',prevPage='collection',currentPage='home';
 let _listeFiltreCourante=[];
 let catTab='tous';
-let tagFiltres={statut:'tous',decennie:'',annee:'',genre:'',nationalite:'',qualite:'',saga:''};
+let tagFiltres={statut:'tous',decennie:new Set(),annee:'',genre:'',nationalite:'',qualite:'',saga:''};
 let manuelType='films';
 let ficheFilmCourante=null;
 
@@ -926,7 +952,7 @@ function nouveauFilm(data){
     titre:data.titre||'',resume:data.resume||'',
     affichePath:data.affichePath||null,backdropPath:data.backdropPath||null,
     dateSortie:data.dateSortie||'',notesTmdb:data.notesTmdb||0,
-    genres:data.genres||'',casting:data.casting||'',
+    genres:data.genres||'',sousGenres:data.sousGenres||'',casting:data.casting||'',
     nationalite:data.nationalite||'',noteManuelle:data.noteManuelle||'',
     pays:data.pays||[],duree:data.duree||0,emplacement:data.emplacement||'',
     visionnages:data.visionnages||[],episodesVus:data.episodesVus||{},
@@ -1177,17 +1203,32 @@ function toggleFiltres(){
 }
 
 function setTagFiltre(groupe,valeur,btn){
-  // Toggle : si déjà actif, désactiver (sauf 'tous')
-  if(tagFiltres[groupe]===valeur && valeur!=='' && valeur!=='tous'){
-    tagFiltres[groupe]=groupe==='statut'?'tous':'';
-    document.querySelectorAll('#tags-'+groupe+' .tag').forEach(b=>b.classList.remove('active','active-decade'));
-    // Réactiver le bouton "Tous/Toutes"
-    const defBtn=document.querySelector('#tags-'+groupe+' .tag');
-    if(defBtn) defBtn.classList.add(groupe==='decennie'?'active-decade':'active');
+  if(groupe==='decennie'){
+    if(valeur===''){
+      tagFiltres.decennie=new Set();
+      document.querySelectorAll('#tags-decennie .tag').forEach(b=>b.classList.remove('active','active-decade'));
+      btn.classList.add('active-decade','active');
+    } else {
+      // Toggle la décennie
+      if(tagFiltres.decennie.has(valeur)) tagFiltres.decennie.delete(valeur);
+      else tagFiltres.decennie.add(valeur);
+      btn.classList.toggle('active-decade',tagFiltres.decennie.has(valeur));
+      btn.classList.toggle('active',tagFiltres.decennie.has(valeur));
+      // Désactiver "Toutes" si une décennie est sélectionnée
+      const toutesBtn=document.querySelector('#tags-decennie .tag');
+      if(toutesBtn) toutesBtn.classList.toggle('active',tagFiltres.decennie.size===0);
+    }
   } else {
-    tagFiltres[groupe]=valeur;
-    document.querySelectorAll('#tags-'+groupe+' .tag').forEach(b=>b.classList.remove('active','active-decade'));
-    btn.classList.add(groupe==='decennie'?'active-decade':'active');
+    if(tagFiltres[groupe]===valeur && valeur!=='' && valeur!=='tous'){
+      tagFiltres[groupe]=groupe==='statut'?'tous':'';
+      document.querySelectorAll('#tags-'+groupe+' .tag').forEach(b=>b.classList.remove('active','active-decade'));
+      const defBtn=document.querySelector('#tags-'+groupe+' .tag');
+      if(defBtn) defBtn.classList.add('active');
+    } else {
+      tagFiltres[groupe]=valeur;
+      document.querySelectorAll('#tags-'+groupe+' .tag').forEach(b=>b.classList.remove('active','active-decade'));
+      btn.classList.add('active');
+    }
   }
   renderCollection();
 }
@@ -1224,7 +1265,7 @@ function buildFiltresDynamiques(){
 }
 
 function resetFiltres(){
-  tagFiltres={statut:'tous',decennie:'',annee:'',genre:'',nationalite:'',qualite:'',saga:''};
+  tagFiltres={statut:'tous',decennie:new Set(),annee:'',genre:'',nationalite:'',qualite:'',saga:''};
   document.getElementById('filtre-acteur').value='';
   buildFiltresDynamiques();
   renderCollection();
@@ -1285,7 +1326,7 @@ function renderCollection(){
     // Exclure "à trouver" de toute la collection normale sauf filtre explicite
     if(tagFiltres.statut==='tous'&&f.statut==='trouver') return false;
     if(tagFiltres.statut!=='tous'&&f.statut!==tagFiltres.statut) return false;
-    if(tagFiltres.decennie){const y=parseInt((f.dateSortie||'').slice(0,4));if(isNaN(y)||Math.floor(y/10)*10!==parseInt(tagFiltres.decennie)) return false;}
+    if(tagFiltres.decennie&&tagFiltres.decennie.size>0){const y=parseInt((f.dateSortie||'').slice(0,4));if(isNaN(y)||!tagFiltres.decennie.has(String(Math.floor(y/10)*10))) return false;}
     if(tagFiltres.annee&&(f.dateSortie||'').slice(0,4)!==tagFiltres.annee) return false;
     if(tagFiltres.genre&&!(f.genres||'').toLowerCase().includes(tagFiltres.genre.toLowerCase())) return false;
     if(tagFiltres.nationalite&&!(f.pays||[]).includes(tagFiltres.nationalite)) return false;
@@ -1310,7 +1351,7 @@ function renderCollection(){
   const actifs=[];
   const statutLabels={trouver:'🔍 À trouver',avoir:'📋 À voir',cours:'▶️ En cours',vu:'👁 Vus'};
   if(tagFiltres.statut!=='tous') actifs.push(statutLabels[tagFiltres.statut]||tagFiltres.statut);
-  if(tagFiltres.decennie) actifs.push('Décennie: '+tagFiltres.decennie+'s');
+  if(tagFiltres.decennie&&tagFiltres.decennie.size>0) actifs.push('Décennie: '+[...tagFiltres.decennie].join(', '));
   if(tagFiltres.annee) actifs.push('Année: '+tagFiltres.annee);
   if(tagFiltres.genre) actifs.push('Genre: '+tagFiltres.genre);
   if(tagFiltres.nationalite) actifs.push('🌍 '+tagFiltres.nationalite);
@@ -1523,6 +1564,83 @@ function assignerSaga(){
 // ── SAGAS ──
 function getToutesLesSagas(){
   return [...new Set(films.map(f=>f.saga||'').filter(Boolean))].sort();
+}
+
+
+// ── GENRE/SOUS-GENRE EN SÉLECTION MULTIPLE ──
+function ouvrirModalGenreSelection(){
+  const ids=[..._selectionIds];
+  if(ids.length===0){snack('⚠️ Sélectionne des films d\'abord');return;}
+  document.getElementById('genre-sel-info').textContent=ids.length+' film(s) sélectionné(s)';
+  document.getElementById('genre-sel-input').value='';
+  document.getElementById('sousgenre-sel-input').value='';
+  document.getElementById('modal-genre-selection').classList.add('open');
+}
+
+function showGenreSelSuggestions(){
+  const input=document.getElementById('genre-sel-input');
+  const box=document.getElementById('genre-sel-suggestions');
+  const val=(input.value||'').toLowerCase();
+  const tous=getTousLesGenres();
+  const filtres=val?tous.filter(g=>g.toLowerCase().startsWith(val)):tous;
+  if(!filtres.length){box.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML=filtres.map(g=>'<div style="padding:10px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #222" onclick="document.getElementById(\'genre-sel-input\').value=\''+esc(g)+'\';hideGenreSelSuggestions()">🎭 '+esc(g)+'</div>').join('');
+}
+function hideGenreSelSuggestions(){const b=document.getElementById('genre-sel-suggestions');if(b)b.style.display='none';}
+
+function showSousGenreSelSuggestions(){
+  const input=document.getElementById('sousgenre-sel-input');
+  const box=document.getElementById('sousgenre-sel-suggestions');
+  const val=(input.value||'').toLowerCase();
+  const tous=getTousSousGenres();
+  const filtres=val?tous.filter(g=>g.toLowerCase().startsWith(val)):tous;
+  if(!filtres.length){box.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML=filtres.map(g=>'<div style="padding:10px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #222" onclick="document.getElementById(\'sousgenre-sel-input\').value=\''+esc(g)+'\';hideSousGenreSelSuggestions()">🏷 '+esc(g)+'</div>').join('');
+}
+function hideSousGenreSelSuggestions(){const b=document.getElementById('sousgenre-sel-suggestions');if(b)b.style.display='none';}
+
+function assignerGenreSelection(){
+  const genre=(document.getElementById('genre-sel-input').value||'').trim();
+  const sousGenre=(document.getElementById('sousgenre-sel-input').value||'').trim();
+  if(!genre&&!sousGenre){snack('⚠️ Entre au moins un genre');return;}
+  const ids=[..._selectionIds];
+  sauvegarderSnapshot('Genre "'+genre+'" sur '+ids.length+' film(s)');
+  ids.forEach(id=>{
+    const f=films.find(f=>f.id===id);if(!f) return;
+    if(genre){
+      const genres=f.genres?f.genres.split(',').map(g=>g.trim()).filter(Boolean):[];
+      if(!genres.map(g=>g.toLowerCase()).includes(genre.toLowerCase())){
+        genres.push(genre);f.genres=genres.join(',');
+      }
+    }
+    if(sousGenre){
+      const sousGenres=f.sousGenres?f.sousGenres.split(',').map(g=>g.trim()).filter(Boolean):[];
+      if(!sousGenres.map(g=>g.toLowerCase()).includes(sousGenre.toLowerCase())){
+        sousGenres.push(sousGenre);f.sousGenres=sousGenres.join(',');
+      }
+    }
+  });
+  sauvegarder();
+  fermerModal('modal-genre-selection');
+  _selectionIds.clear();_modeSelection=false;
+  const bar=document.getElementById('sel-bar');
+  if(bar){bar.classList.remove('active');bar.style.display='none';}
+  const btn=document.getElementById('btn-selectionner');
+  if(btn){btn.style.background='var(--surface2)';btn.style.color='var(--text2)';}
+  renderCollection();
+  snack('✓ Genre/sous-genre assigné à '+ids.length+' film(s)');
+}
+
+// ── TAILLE RÉSULTATS RECHERCHE ──
+let _searchResultSize=1;
+function setSearchResultSize(val){
+  _searchResultSize=parseInt(val);
+  const items=document.querySelectorAll('.result-item img');
+  const sizes=[50,80,120,160];
+  const s=sizes[_searchResultSize-1]||50;
+  items.forEach(img=>{img.style.width=s+'px';img.style.height=(s*1.5)+'px';});
 }
 
 function ouvrirModalSagaAssign(){
@@ -1784,7 +1902,7 @@ function afficherDetail(f){
     +'</div>'
     +'<div class="detail-body">'
     +'<div class="detail-header">'
-    +'<img class="detail-poster" src="'+(f.affichePath||'')+'" onerror="this.style.background=\'var(--green-dark)\';this.src=\'\'" alt="" onclick="choisirAfficheFilm('+f.id+')" style="cursor:pointer" title="Cliquer pour changer l\'affiche">'
+    +'<img class="detail-poster" src="'+(f.affichePath||'')+'" onerror="this.style.background=\'var(--green-dark)\';this.src=\'\'" alt="" onclick="voirPhoto(\''+(f.affichePath||'')+'\')" style="cursor:pointer" title="Voir en grand">'
     +'<div style="font-size:9px;color:var(--text2);text-align:center;margin-top:3px;cursor:pointer" onclick="choisirAfficheFilm('+f.id+')">🖼 Changer</div>'
     +'<div class="detail-info"><h2>'+esc(f.titre)+'</h2>'
     +'<div class="dmeta">'
@@ -1822,6 +1940,18 @@ function afficherDetail(f){
     +'<p style="font-size:11px;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">🎭 Genres</p>'
     +'<div class="genres-wrap" id="genres-tags-'+f.id+'">'
     +(f.genres?f.genres.split(',').map((g,i)=>g.trim()?'<span class="genre-tag-edit" style="background:var(--green-dark);color:#ffffff;padding:3px 10px;border-radius:12px;font-size:11px;display:inline-flex;align-items:center;gap:2px">'+esc(g.trim())+'<span class="genre-del" onclick="supprimerGenre('+f.id+','+i+')">✕</span></span>':'').join(''):'' )
+    +'</div>'
+    // Sous-genres
+    +'<div style="margin-bottom:14px">'  
+    +'<p style="font-size:11px;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">🏷 Sous-genres</p>'
+    +'<div class="genres-wrap" id="sousgenres-tags-'+f.id+'">'  
+    +(f.sousGenres?f.sousGenres.split(',').map((g,i)=>g.trim()?'<span class="genre-tag-edit" style="background:#2a1a4a;color:#c0a0ff;padding:3px 10px;border-radius:12px;font-size:11px;display:inline-flex;align-items:center;gap:2px">'+esc(g.trim())+'<span class="genre-del" onclick="supprimerSousGenre('+f.id+','+i+')">✕</span></span>':'').join(''):'')
+    +'</div>'
+    +'<div style="display:flex;gap:6px;margin-top:6px;position:relative">'
+    +'<input class="version-input" id="sousgenre-input-'+f.id+'" placeholder="Ajouter un sous-genre..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ajouterSousGenre('+f.id+')}" oninput="showSousGenreSuggestions('+f.id+')" onfocus="showSousGenreSuggestions('+f.id+')" onblur="setTimeout(()=>hideSousGenreSuggestions('+f.id+'),200)">'
+    +'<div id="sousgenre-suggestions-'+f.id+'" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid #333;border-radius:0 0 8px 8px;z-index:50;max-height:150px;overflow-y:auto"></div>'
+    +'<button class="btn btn-primary btn-sm" onclick="ajouterSousGenre('+f.id+')">+</button>'
+    +'</div>'
     +'</div>'
     +'<div style="display:flex;gap:6px;margin-top:6px;position:relative">'
     +'<input class="version-input" id="genre-input-'+f.id+'" placeholder="Ajouter un genre..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ajouterGenre('+f.id+')}" oninput="showGenreSuggestions('+f.id+')" onfocus="showGenreSuggestions('+f.id+')" onblur="setTimeout(()=>hideGenreSuggestions('+f.id+'),200)">'
@@ -2694,6 +2824,9 @@ function saveApiKey(){
 }
 
 function exporterJSON(){
+  const now=new Date().toLocaleString('fr-FR');
+  const el=document.getElementById('json-status');
+  if(el) el.textContent='✓ Sauvegardé le '+now;
   if(films.length===0){snack('⚠️ Aucun contenu à exporter');return;}
   const a=document.createElement('a');
   a.href='data:application/json,'+encodeURIComponent(JSON.stringify(films,null,2));
@@ -2735,6 +2868,63 @@ function importerJSON(event){
 function toutSupprimer(){
   if(!confirm('Supprimer les '+films.length+' éléments ?')) return;
   films=[];sauvegarder();snack('Collection supprimée');renderSettings();
+}
+
+
+function getTousSousGenres(){
+  return [...new Set(films.flatMap(f=>(f.sousGenres||'').split(',').map(g=>g.trim()).filter(Boolean)))].sort();
+}
+
+function showSousGenreSuggestions(id){
+  const input=document.getElementById('sousgenre-input-'+id);
+  const box=document.getElementById('sousgenre-suggestions-'+id);
+  if(!input||!box) return;
+  const val=(input.value||'').toLowerCase();
+  const tous=getTousSousGenres();
+  const filtres=val?tous.filter(g=>g.toLowerCase().startsWith(val)):tous;
+  const f=films.find(f=>f.id===id);
+  const dejaPres=(f&&f.sousGenres)?f.sousGenres.split(',').map(g=>g.trim().toLowerCase()):[];
+  const disponibles=filtres.filter(g=>!dejaPres.includes(g.toLowerCase()));
+  if(disponibles.length===0){box.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML=disponibles.map(g=>'<div style="padding:10px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #222" onclick="choisirSousGenre('+id+',\''+esc(g)+'\')">🏷 '+esc(g)+'</div>').join('');
+}
+
+function hideSousGenreSuggestions(id){
+  const box=document.getElementById('sousgenre-suggestions-'+id);
+  if(box) box.style.display='none';
+}
+
+function choisirSousGenre(id,genre){
+  const input=document.getElementById('sousgenre-input-'+id);
+  if(input) input.value=genre;
+  hideSousGenreSuggestions(id);
+  ajouterSousGenre(id);
+}
+
+function ajouterSousGenre(id){
+  const f=films.find(f=>f.id===id);if(!f) return;
+  const input=document.getElementById('sousgenre-input-'+id);
+  const g=(input.value||'').trim();
+  if(!g) return;
+  const sousGenres=f.sousGenres?f.sousGenres.split(',').map(x=>x.trim()).filter(Boolean):[];
+  if(sousGenres.map(x=>x.toLowerCase()).includes(g.toLowerCase())){snack('Sous-genre déjà présent');return;}
+  sousGenres.push(g);
+  f.sousGenres=sousGenres.join(',');
+  sauvegarder();
+  input.value='';
+  afficherDetail(f);
+  snack('✓ Sous-genre ajouté : '+g);
+}
+
+function supprimerSousGenre(id,idx){
+  const f=films.find(f=>f.id===id);if(!f) return;
+  const sousGenres=f.sousGenres?f.sousGenres.split(',').map(x=>x.trim()).filter(Boolean):[];
+  sousGenres.splice(idx,1);
+  f.sousGenres=sousGenres.join(',');
+  sauvegarder();
+  afficherDetail(f);
+  snack('Sous-genre supprimé');
 }
 
 function getTousLesGenres(){
@@ -3134,9 +3324,12 @@ window.addEventListener('load', ()=>{
       google.accounts.oauth2.initTokenClient({
         client_id:GOOGLE_CLIENT_ID,
         scope:DRIVE_SCOPE,
-        prompt:'none', // Silencieux — pas de popup
+        prompt:'none',
         callback:(resp)=>{
-          if(resp.error) return; // Pas connecté, on ne fait rien
+          if(resp.error){
+            // Pas de session active, afficher le bouton connexion normalement
+            return;
+          }
           _googleToken=resp.access_token;
           chargerProfilGoogle();
         }
