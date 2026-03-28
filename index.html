@@ -199,12 +199,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .modal-header h3{flex:1;font-size:15px}
 .modal-close{background:none;border:none;color:var(--text2);font-size:24px;cursor:pointer;padding:0 4px;line-height:1}
 .modal-body{padding:16px}
-.cast-grid{display:grid;grid-template-columns:repeat(var(--search-cols,3),1fr);gap:8px}
+.cast-grid{display:grid;grid-template-columns:repeat(var(--search-cols,4),1fr);gap:6px}
 .cast-card{background:var(--surface2);border-radius:10px;overflow:hidden;cursor:pointer;text-align:center;padding-bottom:8px}
 .cast-card img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:var(--green-dark)}
 .cast-card .cast-name{font-size:11px;font-weight:bold;padding:5px 4px 2px;line-height:1.3}
 .cast-card .cast-role{font-size:10px;color:var(--text2);padding:0 4px}
-.filmo-grid{display:grid;grid-template-columns:repeat(var(--search-cols,3),1fr);gap:8px}
+.filmo-grid{display:grid;grid-template-columns:repeat(var(--search-cols,4),1fr);gap:6px}
 .filmo-card{background:var(--surface2);border-radius:10px;overflow:hidden;cursor:pointer;position:relative}
 .filmo-card img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:var(--green-dark)}
 .filmo-card .filmo-info{padding:6px 8px 8px}
@@ -403,6 +403,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <button class="cat-tab humour" id="ctab-humour" onclick="setCatTab('humour')">😂 Humour/Sketchs</button>
       <button class="cat-tab" id="ctab-saga" onclick="setCatTab('saga')" style="background:var(--surface);border:1px solid #333;color:var(--text2)">🎯 Sagas</button>
       <button class="cat-tab" id="ctab-atrouver" onclick="setCatTab('atrouver')" style="background:var(--surface);border:1px solid #333;color:#f5a623">🔍 À trouver</button>
+      <button class="cat-tab" id="ctab-acritique" onclick="setCatTab('acritique')" style="background:var(--surface);border:1px solid #333;color:#f0a0ff">🎬 Critiques</button>
     </div>
 
     <!-- Panel filtres -->
@@ -490,7 +491,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div style="padding-top:8px">
     <!-- Tabs film / acteur -->
     <div class="search-tabs" style="flex-wrap:wrap;gap:3px">
-      <button class="search-tab active" id="stab-film" onclick="setSearchTab('film')">🎬 Titre</button>
+      <button class="search-tab active" id="stab-film" onclick="setSearchTab('film')">🎬 Film</button>
       <button class="search-tab" id="stab-acteur" onclick="setSearchTab('acteur')">🎭 Acteur</button>
       <button class="search-tab" id="stab-serie" onclick="setSearchTab('serie')">📺 Série</button>
       <button class="search-tab" id="stab-saga" onclick="setSearchTab('saga')">🎯 Saga</button>
@@ -822,7 +823,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <button class="modal-close" onclick="fermerModal('modal-filmo');document.getElementById('modal-fiche').classList.add('open')">←</button>
       <h3 id="modal-filmo-titre">Filmographie</h3>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;padding:8px 16px 4px"><span style="font-size:11px;color:var(--text2)">Taille :</span><input type="range" min="2" max="6" step="1" value="3" style="flex:1;accent-color:var(--green)" oninput="setSearchCols(this.value)"></div>    <div class="modal-body" id="modal-filmo-body"></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 16px 4px"><span style="font-size:11px;color:var(--text2)">Taille :</span><input type="range" min="2" max="8" step="1" value="4" style="flex:1;accent-color:var(--green)" oninput="setSearchCols(this.value)"></div><div class="modal-body" id="modal-filmo-body"></div>
   </div>
 </div>
 
@@ -1329,13 +1330,14 @@ function renderCollection(){
 
   let liste=films.filter(f=>{
     if(catTab==='atrouver') return f.statut==='trouver';
+    if(catTab==='acritique') return f.statut==='critique';
     // Animation : afficher tout ce qui a catégorie animation OU genre Animation
     if(catTab==='animation'){
       const estAnimation=f.categorie==='animation'||(f.genres||'').toLowerCase().split(',').map(g=>g.trim()).includes('animation');
       if(!estAnimation) return false;
     } else if(catTab!=='tous'&&f.categorie!==catTab) return false;
-    // Exclure "à trouver" de toute la collection normale sauf filtre explicite
-    if(tagFiltres.statut==='tous'&&f.statut==='trouver') return false;
+    // Exclure "à trouver" et "critique" de la collection normale
+    if(tagFiltres.statut==='tous'&&(f.statut==='trouver'||f.statut==='critique')) return false;
     if(tagFiltres.statut!=='tous'&&f.statut!==tagFiltres.statut) return false;
     if(tagFiltres.decennie&&tagFiltres.decennie.size>0){const y=parseInt((f.dateSortie||'').slice(0,4));if(isNaN(y)||!tagFiltres.decennie.has(String(Math.floor(y/10)*10))) return false;}
     if(tagFiltres.annee&&(f.dateSortie||'').slice(0,4)!==tagFiltres.annee) return false;
