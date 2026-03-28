@@ -222,7 +222,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .genre-tag{background:var(--green-dark);color:#ffffff;padding:3px 10px;border-radius:12px;font-size:11px}
 
 /* DETAIL */
-.detail-backdrop{width:100%;height:200px;object-fit:cover;display:block;background:var(--green-dark)}
+.detail-backdrop{width:100%;height:220px;object-fit:contain;display:block;background:#000}
 .detail-body{padding:16px}
 .detail-header{display:flex;gap:12px;margin-bottom:16px}
 .detail-poster{width:85px;height:128px;object-fit:cover;border-radius:8px;flex-shrink:0;background:var(--green-dark)}
@@ -504,7 +504,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
         <button class="btn btn-primary" onclick="searchTmdb('movie')">🔍</button>
       </div>
       <div id="search-loader" class="loader" style="display:none"><div class="spinner"></div></div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:11px;color:var(--text2)">Taille :</span><input type="range" min="1" max="4" step="1" value="1" style="flex:1" oninput="setSearchResultSize(this.value)"></div><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:4px 0"><span style="font-size:11px;color:var(--text2)">🔎 Taille :</span><input type="range" min="2" max="6" step="1" value="3" style="flex:1;accent-color:var(--green)" oninput="setSearchCols(this.value)"><span id="search-cols-label" style="font-size:11px;color:var(--text2);min-width:20px">3</span></div><div id="search-results"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:4px 0"><span style="font-size:11px;color:var(--text2)">🔎 Taille :</span><input type="range" min="2" max="6" step="1" value="3" style="flex:1;accent-color:var(--green)" oninput="setSearchCols(this.value)"><span id="search-cols-label" style="font-size:11px;color:var(--text2);min-width:20px">3</span></div><div id="search-results"></div>
     </div>
 
     <!-- Acteur -->
@@ -811,7 +811,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <h3 id="modal-fiche-titre">Fiche</h3>
       <button class="btn btn-primary btn-sm" id="modal-fiche-add" style="flex-shrink:0">+ Ajouter</button>
     </div>
-    <div class="modal-body" id="modal-fiche-body"></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 16px 4px"><span style="font-size:11px;color:var(--text2)">Taille :</span><input type="range" min="2" max="6" step="1" value="3" style="flex:1;accent-color:var(--green)" oninput="setSearchCols(this.value)"></div>    <div class="modal-body" id="modal-fiche-body"></div>
   </div>
 </div>
 
@@ -822,7 +822,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <button class="modal-close" onclick="fermerModal('modal-filmo');document.getElementById('modal-fiche').classList.add('open')">←</button>
       <h3 id="modal-filmo-titre">Filmographie</h3>
     </div>
-    <div class="modal-body" id="modal-filmo-body"></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 16px 4px"><span style="font-size:11px;color:var(--text2)">Taille :</span><input type="range" min="2" max="6" step="1" value="3" style="flex:1;accent-color:var(--green)" oninput="setSearchCols(this.value)"></div>    <div class="modal-body" id="modal-filmo-body"></div>
   </div>
 </div>
 
@@ -2221,6 +2221,7 @@ async function ouvrirFicheFilm(tmdbId,type){
   document.getElementById('modal-fiche-titre').textContent='Chargement...';
   document.getElementById('modal-fiche-body').innerHTML='<div class="loader"><div class="spinner"></div></div>';
   document.getElementById('modal-fiche').classList.add('open');
+  pushModalState('modal-fiche');
   document.getElementById('modal-fiche-add').onclick=()=>ajouterTmdbDepuisModal(tmdbId,type);
   try{
     const endpoint=type==='tv'?'/tv/':'/movie/';
@@ -2737,6 +2738,7 @@ async function ouvrirFilmographie(acteurId,nom){
   document.getElementById('modal-filmo-titre').textContent=nom;
   document.getElementById('modal-filmo-body').innerHTML='<div class="loader"><div class="spinner"></div></div>';
   document.getElementById('modal-filmo').classList.add('open');
+  pushModalState('modal-filmo');
   try{
     const r=await fetch(TMDB_API+'/person/'+acteurId+'/movie_credits?api_key='+prefs.apiKey+'&language=fr-FR');
     const data=await r.json();
@@ -2768,7 +2770,8 @@ async function ouvrirFilmographie(acteurId,nom){
 async function ouvrirFicheFilmDepuisFilmo(tmdbId){
   fermerModal('modal-filmo');
   await ouvrirFicheFilm(tmdbId,'movie');
-  document.querySelector('#modal-fiche .modal-close').onclick=()=>{fermerModal('modal-fiche');document.getElementById('modal-filmo').classList.add('open');};
+  document.querySelector('#modal-fiche .modal-close').onclick=()=>{fermerModal('modal-fiche');document.getElementById('modal-filmo').classList.add('open');
+  pushModalState('modal-filmo');};
 }
 
 function suggestionAleatoire(){
@@ -2876,7 +2879,32 @@ function appliquerPolice(val){
 }
 
 function renderSettings(){
-  // Restaurer les dates de sauvegarde
+  
+// ── GESTION RETOUR NAVIGATEUR (MOBILE) ──
+function pushModalState(modalId){
+  history.pushState({modal:modalId}, '');
+}
+
+window.addEventListener('popstate', (e)=>{
+  // Fermer la modal ouverte si retour navigateur
+  const modals=['modal-fiche','modal-filmo','modal-affiche-film','modal-affiche-saga',
+    'modal-tri','modal-fusion','modal-saga','modal-genre-selection','modal-actions-rapides'];
+  const ouvertes=modals.filter(id=>{
+    const el=document.getElementById(id);
+    return el&&el.classList.contains('open');
+  });
+  if(ouvertes.length>0){
+    fermerModal(ouvertes[ouvertes.length-1]);
+    return;
+  }
+  // Si on est sur la page détail, revenir
+  if(currentPage==='detail'){
+    goPage(prevPage);
+    return;
+  }
+});
+
+// Restaurer les dates de sauvegarde
   const driveDate=localStorage.getItem('drive_save_date');
   const jsonDate=localStorage.getItem('videotheque_json_date');
   setTimeout(()=>{
@@ -3411,26 +3439,28 @@ const _savedJsonDate=localStorage.getItem('videotheque_json_date');
 if(_savedJsonDate){const el=document.getElementById('json-status');if(el)el.textContent='✓ Dernière sauvegarde : '+_savedJsonDate;}
 charger();
 
-// Reconnexion Google auto si déjà connecté auparavant
+// Reconnexion Google auto si déjà connecté
+let _googleClientInstance=null;
 window.addEventListener('load', ()=>{
   const wasConnected=localStorage.getItem('google_was_connected');
-  if(!wasConnected) return;
   setTimeout(()=>{
     if(typeof google==='undefined') return;
     try{
-      const client=google.accounts.oauth2.initTokenClient({
+      _googleClientInstance=google.accounts.oauth2.initTokenClient({
         client_id:GOOGLE_CLIENT_ID,
         scope:DRIVE_SCOPE,
-        prompt:'none',
         callback:(resp)=>{
           if(resp.error||!resp.access_token) return;
           _googleToken=resp.access_token;
           chargerProfilGoogle();
         }
       });
-      client.requestAccessToken({prompt:'none'});
+      if(wasConnected){
+        // Tenter reconnexion silencieuse
+        _googleClientInstance.requestAccessToken({prompt:''});
+      }
     }catch(e){}
-  }, 2000);
+  }, 1500);
 });
 document.documentElement.style.setProperty('--cols',prefs.cols||2);
 document.documentElement.style.setProperty('--home-cols',prefs.homeCols||4);
@@ -3450,6 +3480,10 @@ let _driveAutoSaveTimer=null;
 
 function googleSignIn(){
   if(typeof google==='undefined'){snack('⚠️ Connexion Google disponible sur https:// uniquement');return;}
+  if(_googleClientInstance){
+    _googleClientInstance.requestAccessToken({prompt:'select_account'});
+    return;
+  }
   const client=google.accounts.oauth2.initTokenClient({
     client_id:GOOGLE_CLIENT_ID,scope:DRIVE_SCOPE,
     callback:(resp)=>{
@@ -3458,7 +3492,7 @@ function googleSignIn(){
       chargerProfilGoogle();
     }
   });
-  client.requestAccessToken();
+  client.requestAccessToken({prompt:'select_account'});
 }
 
 async function chargerProfilGoogle(){
