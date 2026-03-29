@@ -928,8 +928,15 @@ function charger(){
   try{prefs={...prefs,...JSON.parse(localStorage.getItem(PREFS_KEY)||'{}') };}catch(e){}
 }
 let _saveCount=0;
+let _autoJsonTimer=null;
 function sauvegarder(){
   localStorage.setItem(DB_KEY,JSON.stringify(films));
+  // Sauvegarde JSON auto après 30s d'inactivité
+  clearTimeout(_autoJsonTimer);
+  _autoJsonTimer=setTimeout(()=>{
+    exporterJSON();
+    snack('💾 Sauvegarde JSON automatique');
+  }, 30000);
   localStorage.setItem(DB_KEY+'_backup',JSON.stringify(films));
   localStorage.setItem(DB_KEY+'_backup_date',new Date().toISOString());
   _saveCount++;
@@ -2220,6 +2227,10 @@ async function searchTmdb(type){
 // ── FICHE FILM/SÉRIE ──
 async function ouvrirFicheFilm(tmdbId,type){
   type=type||'movie';
+  if(!prefs.apiKey){
+    snack('⚠️ Clé API TMDB manquante dans Paramètres');
+    return;
+  }
   document.getElementById('modal-fiche-titre').textContent='Chargement...';
   document.getElementById('modal-fiche-body').innerHTML='<div class="loader"><div class="spinner"></div></div>';
   document.getElementById('modal-fiche').classList.add('open');
@@ -2227,7 +2238,10 @@ async function ouvrirFicheFilm(tmdbId,type){
   document.getElementById('modal-fiche-add').onclick=()=>ajouterTmdbDepuisModal(tmdbId,type);
   try{
     const endpoint=type==='tv'?'/tv/':'/movie/';
-    const r=await fetch(TMDB_API+endpoint+tmdbId+'?api_key='+prefs.apiKey+'&language=fr-FR&append_to_response=credits');
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),10000);
+    const r=await fetch(TMDB_API+endpoint+tmdbId+'?api_key='+prefs.apiKey+'&language=fr-FR&append_to_response=credits',{signal:controller.signal});
+    clearTimeout(timeout);
     const d=await r.json();
     ficheFilmCourante={...d,_type:type};
     const titre=d.title||d.name||'';
@@ -2601,11 +2615,18 @@ function renderVisionnagesGlobal(){
   // Collecter tous les visionnages de tous les films
   const tous=[];
   films.forEach(f=>{
-    (f.visionnages||[]).forEach(v=>{
-      const date=typeof v==='object'?v.date:v;
-      const support=typeof v==='object'?(v.support||''):'';
-      const note=typeof v==='object'?(v.note||0):0;
-      if(date) tous.push({
+    const visionnages=f.visionnages||[];
+    visionnages.forEach(v=>{
+      let date='', support='', note=0;
+      if(typeof v==='object'){
+        date=v.date||v.dateVu||'';
+        support=v.support||v.appareil||'';
+        note=v.note||0;
+      } else if(typeof v==='string'){
+        date=v;
+      }
+      if(!date) return;
+      tous.push({
         date, support, note,
         titre:f.titre, categorie:f.categorie,
         affiche:f.affichePath||'',
@@ -2613,10 +2634,34 @@ function renderVisionnagesGlobal(){
         qualites:(f.qualites||[]).join(', ')
       });
     });
+    // Inclure aussi les visionnages d'épisodes
+    if(f.episodesVus){
+      Object.entries(f.episodesVus).forEach(([key,visEp])=>{
+        (visEp||[]).forEach(v=>{
+          const date=typeof v==='object'?v.date:v;
+          const support=typeof v==='object'?(v.support||''):'';
+          if(!date) return;
+          const epInfo=key.replace(f.id+'_','').replace('s','S').replace('e',' E');
+          tous.push({
+            date, support, note:0,
+            titre:f.titre+' ('+epInfo+')',
+            categorie:f.categorie,
+            affiche:f.affichePath||'',
+            filmId:f.id,
+            qualites:(f.qualites||[]).join(', ')
+          });
+        });
+      });
+    }
   });
 
   // Trier par date décroissante
-  tous.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  tous.sort((a,b)=>{
+    const da=new Date(a.date), db=new Date(b.date);
+    if(isNaN(da)) return 1;
+    if(isNaN(db)) return -1;
+    return db-da;
+  });
 
   if(tous.length===0){
     container.innerHTML='<p style="color:var(--text2);text-align:center;padding:40px">Aucun visionnage enregistré</p>';
@@ -3441,29 +3486,7 @@ const _savedJsonDate=localStorage.getItem('videotheque_json_date');
 if(_savedJsonDate){const el=document.getElementById('json-status');if(el)el.textContent='✓ Dernière sauvegarde : '+_savedJsonDate;}
 charger();
 
-// Reconnexion Google auto si déjà connecté
-let _googleClientInstance=null;
-window.addEventListener('load', ()=>{
-  const wasConnected=localStorage.getItem('google_was_connected');
-  setTimeout(()=>{
-    if(typeof google==='undefined') return;
-    try{
-      _googleClientInstance=google.accounts.oauth2.initTokenClient({
-        client_id:GOOGLE_CLIENT_ID,
-        scope:DRIVE_SCOPE,
-        callback:(resp)=>{
-          if(resp.error||!resp.access_token) return;
-          _googleToken=resp.access_token;
-          chargerProfilGoogle();
-        }
-      });
-      if(wasConnected){
-        // Tenter reconnexion silencieuse
-        _googleClientInstance.requestAccessToken({prompt:''});
-      }
-    }catch(e){}
-  }, 1500);
-});
+let _googleClientInstance=null; // Connexion Google manuelle uniquement
 document.documentElement.style.setProperty('--cols',prefs.cols||2);
 document.documentElement.style.setProperty('--home-cols',prefs.homeCols||4);
 if(prefs.theme==='light') document.body.classList.add('light-mode');
